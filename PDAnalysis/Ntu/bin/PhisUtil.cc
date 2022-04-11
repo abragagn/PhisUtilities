@@ -1,10 +1,10 @@
-/////////////////////////////////////////////////////////////////////////////////
-//      
-//      Collection of utility functions for the Bs->J/PsiPhi CPV analysis
-//
-//      Author: Alberto Bragagnolo (alberto.bragagnolo@cern.ch)
-//
-/////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////
+//                                                                              //
+//      Collection of utility functions for the Bs->J/PsiPhi CPV analysis       //
+//                                                                              //
+//      Author: Alberto Bragagnolo (alberto.bragagnolo@cern.ch)                 //
+//                                                                              //
+//////////////////////////////////////////////////////////////////////////////////
 
 #include "PhisUtil.h"
 
@@ -170,9 +170,7 @@ double PhisUtil::GetGenCT( uint genIndex )
 
     if( genId->at( genIndex ) == - genId->at(genMother->at(genIndex)) ) mthIndex = genMother->at(genIndex ); 
  
-    TLorentzVector pGen;
-    pGen.SetPtEtaPhiM( (double) genPt->at(genIndex), (double) genEta->at(genIndex),
-         (double) genPhi->at(genIndex), (double) genMass->at(genIndex) );
+    ROOT::Math::PtEtaPhiMVector pGen(genPt->at(genIndex), genEta->at(genIndex), genPhi->at(genIndex), genMass->at(genIndex));
 
     double dx = genVx->at(genIndex)-genVx->at(mthIndex);
     double dy = genVy->at(genIndex)-genVy->at(mthIndex);
@@ -241,14 +239,13 @@ bool PhisUtil::IsTightJPsi(int iJPsi)
     if(abs(svtMass->at(iJPsi) - JPSIMASS) > jpsiMassWin ) return false;
 
     vector<int> tkJpsi = tracksFromSV(iJPsi);
-    // TLorentzVector tJPsi(0,0,0,0);           // No more requiremebt on Jpsi momentum
+    // ROOT::Math::PxPyPzEVector tJPsi(0,0,0,0);           // No more requiremebt on Jpsi momentum
 
     for( uint i=0; i<tkJpsi.size(); ++i ){
         int j = tkJpsi[i];
         if(trkPt->at(j) < muPtMin) return false;
         if(abs(trkEta->at(j)) > muEtaMax) return false;
-        // TLorentzVector a;
-        // a.SetPtEtaPhiM( trkPt->at(j), trkEta->at(j), trkPhi->at(j), MUMASS );
+        // ROOT::Math::PtEtaPhiMVector a( trkPt->at(j), trkEta->at(j), trkPhi->at(j), MUMASS );
         // tJPsi += a;
     }
 
@@ -280,7 +277,7 @@ int PhisUtil::GetBestBstrangeTight()
     int index = -1;
     double best = 0.;
 
-    for( int iB=0; iB<nSVertices; ++iB ){
+    for( int iB = 0; iB < nSVertices; ++iB ){
 
         if((svtType->at(iB)!=PDEnumString::svtBsJPsiPhi) ) continue;
 
@@ -298,14 +295,13 @@ int PhisUtil::GetBestBstrangeTight()
         if(!IsTightPhi(iPhi)) continue;
 
         //BS
-        TLorentzVector tB(0,0,0,0);
+        ROOT::Math::PxPyPzEVector tB(0,0,0,0);
 
-        for( uint i=0; i<tkSsB.size(); ++i ){
-            int j = tkSsB[i];
+        for( uint iSsBTrk = 0; iSsBTrk < tkSsB.size(); ++iSsBTrk ){
+            int j = tkSsB[iSsBTrk];
             double m = KMASS;
             if( j == tkJpsi[0] || j == tkJpsi[1] ) m = MUMASS;
-            TLorentzVector a;
-            a.SetPtEtaPhiM( trkPt->at(j), trkEta->at(j), trkPhi->at(j), m );
+            ROOT::Math::PtEtaPhiMVector a( trkPt->at(j), trkEta->at(j), trkPhi->at(j), m );
             tB += a;
         }
 
@@ -314,7 +310,7 @@ int PhisUtil::GetBestBstrangeTight()
         if( bVprob < vtxProbMin ) continue;
         if(tB.Pt() < bsPtMin) continue;
 
-        // int iPV = GetBestPV(iB, tB);
+        // int iPV = GetPVPointing(iB, tB);
         // if(iPV<0) continue;
         if(GetCt2D(tB, BSMASS, iB) < ctMin) continue;
         if(GetCt2D(tB, BSMASS, iB) / GetCt2DErr(tB, BSMASS, iB) < ctSigmaMin) continue;
@@ -342,15 +338,14 @@ int PhisUtil::GetBestBupTight()
         vector<int> tkJpsi = tracksFromSV(iJPsi);
         vector<int> tkSsB = tracksFromSV(iB);
 
-        TLorentzVector tB(0,0,0,0);
+        ROOT::Math::PxPyPzEVector tB(0,0,0,0);
         double KaonPt = 0.;
 
         for( uint i=0; i<tkSsB.size(); ++i ){
             int j = tkSsB[i];
             double m = KMASS;
             if( j == tkJpsi[0] || j == tkJpsi[1] ){ m = MUMASS; }else{ KaonPt = trkPt->at(j); }
-            TLorentzVector a;
-            a.SetPtEtaPhiM( trkPt->at(j), trkEta->at(j), trkPhi->at(j), m );
+            ROOT::Math::PtEtaPhiMVector a( trkPt->at(j), trkEta->at(j), trkPhi->at(j), m );
             tB += a;
        }
 
@@ -361,7 +356,7 @@ int PhisUtil::GetBestBupTight()
         if(tB.Pt() < bsPtMin) continue;
         if(KaonPt < 1.6) continue;
 
-        // int iPV = GetBestPV(iB, tB);
+        // int iPV = GetPVPointing(iB, tB);
         // if(iPV<0) continue;
         if(GetCt2D(tB, BUMASS, iB) < ctMin) continue;
         if(GetCt2D(tB, BUMASS, iB) / GetCt2DErr(tB, BUMASS, iB) < ctSigmaMin) continue;
@@ -388,14 +383,13 @@ int PhisUtil::GetBestBdownTight()
         vector<int> tkJpsi = tracksFromSV(iJPsi);
         vector<int> tkSsB = tracksFromSV(iB);
 
-        TLorentzVector tB(0,0,0,0);
+        ROOT::Math::PxPyPzEVector tB(0,0,0,0);
 
         for( uint i=0; i<tkSsB.size(); ++i ){
             int j = tkSsB[i];
             double m = KXMASS;
             if( j == tkJpsi[0] || j == tkJpsi[1] ) m = MUMASS;
-            TLorentzVector a;
-            a.SetPtEtaPhiM( trkPt->at(j), trkEta->at(j), trkPhi->at(j), m );
+            ROOT::Math::PtEtaPhiMVector a( trkPt->at(j), trkEta->at(j), trkPhi->at(j), m );
             tB += a;
         }
 
@@ -405,7 +399,7 @@ int PhisUtil::GetBestBdownTight()
         if( bVprob < vtxProbMin ) continue;
         if(tB.Pt() < bsPtMin) continue;
 
-        // int PV = GetBestPV(iB, tB);
+        // int PV = GetPVPointing(iB, tB);
         // if(PV<0) continue;
         if(GetCt2D(tB, B0MASS, iB) < ctMin) continue;
         if(GetCt2D(tB, B0MASS, iB) / GetCt2DErr(tB, B0MASS, iB) < ctSigmaMin) continue;
@@ -452,7 +446,7 @@ double PhisUtil::GetInvMass(int i1, int i2, double mass1, double mass2)
 }
 
 // =====================================================================================
-int PhisUtil::TagMixStatus( uint genindex )
+int PhisUtil::GetMixStatus( uint genindex )
 {
     int Code = genId->at( genindex );
 
@@ -595,52 +589,6 @@ double PhisUtil::CountEventsWithFit(TH1 *hist, TString process)
 }
 
 // =====================================================================================
-int PhisUtil::GetBestPV(int isvt, TLorentzVector t)   // TO BE CHECKED
-{
-    int ssPV = -1;
-    double bestCos = -1.;
-    double maxDz = 5.;
-
-    TVector3 vB(t.Px(),t.Py(),t.Pz());
-    TVector3 vSVT( svtX->at(isvt), svtY->at(isvt), svtZ->at(isvt) );
-
-    for( int i=0; i<nPVertices; ++i ){
-       if(abs(svtZ->at(isvt) - pvtZ->at( i )) > maxDz ) continue;
-
-       TVector3 vPV(pvtX->at( i ), pvtY->at( i ), pvtZ->at( i ) );
-       TVector3 vPointing;
-       vPointing = vSVT - vPV;
-       double cos = vPointing.Unit() * vB.Unit();
-
-       if(cos > bestCos ){
-         bestCos = cos;
-         ssPV = i;
-       }
-    }
-    return ssPV;
-}
-
-// =====================================================================================
-TLorentzVector PhisUtil::GetTLorentzVecFromJpsiX(int iSvt)
-{
-    int iJPsi = (daugSVsFromVtx(iSvt, PDEnumString::vtrCascade)).at(0);
-    vector<int> tkJpsi = tracksFromSV(iJPsi);
-    vector<int> tkSsB = tracksFromSV(iSvt);
-    TLorentzVector t(0,0,0,0);
-
-    for( uint i=0; i<tkSsB.size(); ++i ){
-        int j = tkSsB.at(i);
-        double m = KMASS;
-        if( (j==tkJpsi.at(0)) || (j==tkJpsi.at(1)) ) m = MUMASS;
-        TLorentzVector a;
-        a.SetPtEtaPhiM( trkPt->at(j), trkEta->at(j), trkPhi->at(j), m );
-        t += a;
-    }
-
-    return t;
-}
-
-// =====================================================================================
 int PhisUtil::GetTightCandidate(TString process)
 {
     if(process=="BsJPsiPhi") return GetBestBstrangeTight();
@@ -669,12 +617,12 @@ double PhisUtil::dXYjet(int itk, int iPV, int iJet)
 }
 
 // =================================================================================================
-void PhisUtil::PrintMotherChain(int iGen)
+void PhisUtil::PrintMotherChain(int iGen, std::ostream& out)
 {
-    cout<<genId->at(iGen)<<" << ";
+    out<<genId->at(iGen)<<" << ";
     const vector<int>& vM = allMothers(iGen);
     uint nmot = vM.size();
-    if(nmot>1) for(uint im=0; im<nmot; ++im) if(genId->at(vM[im])!=21) cout<<genId->at(vM[im])<<" ";
+    if(nmot>1) for(uint im=0; im<nmot; ++im) if(genId->at(vM[im])!=21) out<<genId->at(vM[im])<<" ";
     if(nmot==1) PrintMotherChain(vM[0]);
     return;
 }
@@ -682,74 +630,40 @@ void PhisUtil::PrintMotherChain(int iGen)
 // =================================================================================================
 void PhisUtil::PrintDaughterTree(int iGen, const string & pre)
 {
-    cout<<genId->at(iGen)<<endl;
-
-    const vector<int>& vD = allDaughters(iGen);
-    uint ndau = vD.size();
-    if(ndau == 0) return;
-
-    bool lastLevel = true;
-    for(uint id =0; id<ndau; ++id){
-        if ( HasDaughter( vD[id] ) ) {
-            lastLevel = false;
-            break;
-        }
-    }
-
-    if( lastLevel ){
-        cout<<pre<< "+-> ";
-        for( uint id=0; id<ndau; ++id ) {
-            int d = vD[id];
-            cout<<genId->at(d)<<" ";
-        }
-        cout<<endl;
-        return;
-    }
-
-    for( uint id=0; id<ndau; ++id ) {
-        int d = vD[id];
-        cout<<pre<< "+-> ";
-        string prepre(pre);
-        if ( id == ndau - 1 ) prepre += "    ";
-        else prepre += "|   ";
-        PrintDaughterTree( d, prepre );
-    }
+    PrintDaughterTree(iGen, cout, pre);
 }
 
 // =================================================================================================
 void PhisUtil::PrintDaughterTreePt(int iGen, const string & pre)
 {
-    cout<<genId->at(iGen)<<" ["<<genPt->at(iGen)<<"]"<<endl;
+    PrintDaughterTree(iGen, cout, pre);
+}
 
-    const vector<int>& vD = allDaughters(iGen);
-    uint ndau = vD.size();
-    if(ndau == 0) return;
-
-    bool lastLevel = true;
-    for(uint id =0; id<ndau; ++id){
-        if ( HasDaughter( vD[id] ) ) {
-            lastLevel = false;
-            break;
-        }
-    }
-
-    if( lastLevel ){
-        cout<<pre<< "+-> ";
-        for( uint id=0; id<ndau; ++id ) {
-            int d = vD[id];
-            cout<<genId->at(d)<<" ["<<genPt->at(iGen)<<"] ";
-        }
-        cout<<endl;
-        return;
-    }
-
-  for( uint id=0; id<ndau; ++id ) {
-    int d = vD[id];
-    cout<<pre<< "+-> ";
-    string prepre(pre);
-    if ( id == ndau - 1 ) prepre += "    ";
-    else prepre += "|   ";
-    PrintDaughterTreePt( d, prepre );
+// =================================================================================================
+void PhisUtil::PrintDaughterTree(int iGen, std::ostream& out, const std::string& indent, bool isLastSibling) {
+  auto& vD = allDaughters(iGen);
+  auto nDau = vD.size();
+  
+  std::string arrow = "|--->";
+  if (nDau > 0) {
+    arrow = "|-+->";
+  }
+  if (isLastSibling) {
+    arrow[0] = '\\';
+  }
+  
+  std::string newIndent = indent + isLastSibling?"  ":"| ";
+  
+  out << indent << arrow 
+    << " pid: " << genId->at(iGen) 
+    << " pt: " << genPt->at(iGen)
+    << " eta: " << genEta->at(iGen) 
+    << " phi: " << genPhi->at(iGen) 
+    << std::endl;
+  
+  for (size_t iDau = 0; iDau < nDau; iDau++) {
+    auto&& dau = vD[iDau];
+    PrintDaughterTree(dau, out, newIndent, iDau + 1 == nDau);
   }
 }
 
@@ -759,253 +673,13 @@ bool PhisUtil::HasDaughter(int iGen)
     const vector<int>& vD = allDaughters(iGen);
     return vD.size()>0 ? true : false;
 }
-
-// =================================================================================================
-double PhisUtil::GetCt2D(TLorentzVector t, double bMass, int iSV)
-{
-    TVector3 SVpos, PVpos;
-    SVpos.SetXYZ(svtX->at(iSV),svtY->at(iSV),svtZ->at(iSV));
-    PVpos.SetXYZ(bsX, bsY, 0.);
-    TVector3 Lxy = SVpos - PVpos;
-
-    TVector3 ptB = t.Vect();
-    ptB.SetZ(0.);
-
-    return bMass*Lxy.Dot(ptB)/ptB.Mag2();
-}
-
-// =================================================================================================
-double PhisUtil::GetCt2D(TLorentzVector t, double bMass, int iSV, int iPV)
-{
-    TVector3 SVpos, PVpos;
-    SVpos.SetXYZ(svtX->at(iSV),svtY->at(iSV),svtZ->at(iSV));
-    PVpos.SetXYZ(pvtX->at(iPV),pvtY->at(iPV),0.);
-    TVector3 Lxy = SVpos - PVpos;
-
-    TVector3 ptB = t.Vect();
-    ptB.SetZ(0.);
-    
-    return bMass*Lxy.Dot(ptB)/ptB.Mag2();
-}
-
-// =================================================================================================
-double PhisUtil::GetCt3D(TLorentzVector t, double bMass, int iSV, int iPV)
-{
-    TVector3 SVpos, PVpos;
-    SVpos.SetXYZ(svtX->at(iSV),svtY->at(iSV),svtZ->at(iSV));
-    PVpos.SetXYZ(pvtX->at(iPV),pvtY->at(iPV),pvtZ->at(iPV));
-    TVector3 Lxyz = SVpos - PVpos;
-
-    TVector3 pB = t.Vect();
-    
-    return bMass*Lxyz.Dot(pB)/pB.Mag2();
-}
-
-// =================================================================================================
-double PhisUtil::GetCt2DErr(TLorentzVector t, double bMass, int iSV, int iPV)
-{
-
-    TVector3 SVpos, PVpos;
-    SVpos.SetXYZ(svtX->at(iSV),svtY->at(iSV),svtZ->at(iSV));
-    PVpos.SetXYZ(pvtX->at(iPV),pvtY->at(iPV),0.);
-    TVector3 Lxy = SVpos - PVpos;
-
-    TVector3 ptB = t.Vect();
-    ptB.SetZ(0.);
-
-    double ct = bMass*Lxy.Dot(ptB)/ptB.Mag2();
-
-    // Conversions for matrix multiplications
-    double covSVArray[] = {
-        svtSxx->at(iSV),svtSxy->at(iSV),svtSxz->at(iSV),
-        svtSxy->at(iSV),svtSyy->at(iSV),svtSyz->at(iSV),
-        svtSxz->at(iSV),svtSyz->at(iSV),svtSzz->at(iSV)
-    };
-
-    double covPVArray[] = {
-        pvtSxx->at(iPV),pvtSxy->at(iPV),pvtSxz->at(iPV),
-        pvtSxy->at(iPV),pvtSyy->at(iPV),pvtSyz->at(iPV),
-        pvtSxz->at(iPV),pvtSyz->at(iPV),pvtSzz->at(iPV)
-    };
-
-    TMatrixD covSV(3,3);
-    TMatrixD covPV(3,3);
-    covSV.SetMatrixArray(covSVArray);
-    covPV.SetMatrixArray(covPVArray);
-
-    TMatrixD covTot = covSV + covPV;
-
-    double LxyArray[] = {Lxy.X(), Lxy.Y(), Lxy.Z()};
-    TVectorD LxyVectorD(3, LxyArray);
-
-    double ptBArray[] = {ptB.X(), ptB.Y(), ptB.Z()};
-    TVectorD ptBVector(3, ptBArray);
-
-    //Lxy contribution
-    double ctErr_Lxy2 = pow(bMass/ptB.Mag2(),2)*covTot.Similarity(ptBVector);
-
-    //Pt contribution
-    vector<int> tkB  = tracksFromSV(iSV);
-    int ntk = tkB.size();
-
-    unordered_map<int,int> trkTotpp;
-
-    for(int itpp=0; itpp<nTrkPer; itpp++)
-        trkTotpp[tppTrk->at(itpp)] = itpp;
-
-    TVector3 trkTVector3[ntk];
-    int qArray[ntk];
-    int trk_idx[ntk];
-
-    for( int i=0; i<ntk; ++i ){
-        int j = tkB.at(i);
-        TVector3 tempTV3;
-        tempTV3.SetXYZ(trkPx->at(j),trkPy->at(j),trkPz->at(j));
-
-        trkTVector3[i]  = tempTV3;
-        qArray[i]       = trkCharge->at(j);
-        trk_idx[i]      = j;
-    }
-
-    double ctErr_pt2 = 0.;
-
-    // Construct trkTotpp map
-    for(int i=0; i<ntk; ++i){
-        int itpp = trkTotpp.at(trk_idx[i]);
-
-        double covHelixArray[] = {
-            tppSQopQop->at(itpp), tppSQopLam->at(itpp), tppSQopPhi->at(itpp),
-            tppSQopLam->at(itpp), tppSLamLam->at(itpp), tppSLamPhi->at(itpp),
-            tppSQopPhi->at(itpp), tppSLamPhi->at(itpp), tppSPhiPhi->at(itpp)
-        };
-        TMatrixD covHelix(3,3);
-        covHelix.SetMatrixArray(covHelixArray);
-
-        // Helix parameters
-        double Qop = qArray[i]/trkTVector3[i].Mag();
-        double Lam = TMath::Pi()/2 - trkTVector3[i].Theta();
-
-        double DQop = 1./(ptB.Mag2()*Qop)*(2*ct*ptB.Dot(trkTVector3[i]) - bMass*Lxy.Dot(trkTVector3[i]));
-        double DLam = tan(Lam)/ptB.Mag2()*(2*ct*ptB.Dot(trkTVector3[i]) - bMass*Lxy.Dot(trkTVector3[i]));
-        double DPhi = 1./ptB.Mag2()*(bMass*(Lxy.Y()*trkTVector3[i].X()-Lxy.X()*trkTVector3[i].Y())
-                                  -2*ct*(ptB.Y()*trkTVector3[i].X()-ptB.X()*trkTVector3[i].Y()));
-
-        double DHelixArray[] = {DQop, DLam, DPhi};
-        TVectorD DHelixVectorD(3, DHelixArray);
-
-        ctErr_pt2 += covHelix.Similarity(DHelixVectorD);
-    }
-    return sqrt(ctErr_Lxy2 + ctErr_pt2);
-}
-
-
-// =================================================================================================
-double PhisUtil::GetCt2DErr(TLorentzVector t, double bMass, int iSV)
-{
-
-    TVector3 SVpos, PVpos;
-    SVpos.SetXYZ(svtX->at(iSV),svtY->at(iSV),svtZ->at(iSV));
-    PVpos.SetXYZ(bsX,bsY,0.);
-    TVector3 Lxy = SVpos - PVpos;
-
-    TVector3 ptB = t.Vect();
-    ptB.SetZ(0.);
-
-    double ct = bMass*Lxy.Dot(ptB)/ptB.Mag2();
-
-    // Conversions for matrix multiplications
-    double covSVArray[] = {
-        svtSxx->at(iSV),svtSxy->at(iSV),svtSxz->at(iSV),
-        svtSxy->at(iSV),svtSyy->at(iSV),svtSyz->at(iSV),
-        svtSxz->at(iSV),svtSyz->at(iSV),svtSzz->at(iSV)
-    };
-
-    double covPVArray[] = { // to be defined !!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-        0.,0.,0.,
-        0.,0.,0.,
-        0.,0.,0.
-    };
-
-    TMatrixD covSV(3,3);
-    TMatrixD covPV(3,3);
-    covSV.SetMatrixArray(covSVArray);
-    covPV.SetMatrixArray(covPVArray);
-
-    TMatrixD covTot = covSV + covPV;
-
-    double LxyArray[] = {Lxy.X(), Lxy.Y(), Lxy.Z()};
-    TVectorD LxyVectorD(3, LxyArray);
-
-    double ptBArray[] = {ptB.X(), ptB.Y(), ptB.Z()};
-    TVectorD ptBVector(3, ptBArray);
-
-    //Lxy contribution
-    double ctErr_Lxy2 = pow(bMass/ptB.Mag2(),2)*covTot.Similarity(ptBVector);
-
-    //Pt contribution
-    vector<int> tkB  = tracksFromSV(iSV);
-    int ntk = tkB.size();
-
-    unordered_map<int,int> trkTotpp;
-
-    for(int itpp=0; itpp<nTrkPer; itpp++)
-        trkTotpp[tppTrk->at(itpp)] = itpp;
-
-    TVector3 trkTVector3[ntk];
-    int qArray[ntk];
-    int trk_idx[ntk];
-
-    for( int i=0; i<ntk; ++i ){
-        int j = tkB.at(i);
-        TVector3 tempTV3;
-        tempTV3.SetXYZ(trkPx->at(j),trkPy->at(j),trkPz->at(j));
-
-        trkTVector3[i]  = tempTV3;
-        qArray[i]       = trkCharge->at(j);
-        trk_idx[i]      = j;
-    }
-
-    double ctErr_pt2 = 0.;
-
-    // Construct trkTotpp map
-    for(int i=0; i<ntk; ++i){
-        int itpp = trkTotpp.at(trk_idx[i]);
-
-        double covHelixArray[] = {
-            tppSQopQop->at(itpp), tppSQopLam->at(itpp), tppSQopPhi->at(itpp),
-            tppSQopLam->at(itpp), tppSLamLam->at(itpp), tppSLamPhi->at(itpp),
-            tppSQopPhi->at(itpp), tppSLamPhi->at(itpp), tppSPhiPhi->at(itpp)
-        };
-        TMatrixD covHelix(3,3);
-        covHelix.SetMatrixArray(covHelixArray);
-
-        // Helix parameters
-        double Qop = qArray[i]/trkTVector3[i].Mag();
-        double Lam = TMath::Pi()/2 - trkTVector3[i].Theta();
-
-        double DQop = 1./(ptB.Mag2()*Qop)*(2*ct*ptB.Dot(trkTVector3[i]) - bMass*Lxy.Dot(trkTVector3[i]));
-        double DLam = tan(Lam)/ptB.Mag2()*(2*ct*ptB.Dot(trkTVector3[i]) - bMass*Lxy.Dot(trkTVector3[i]));
-        double DPhi = 1./ptB.Mag2()*(bMass*(Lxy.Y()*trkTVector3[i].X()-Lxy.X()*trkTVector3[i].Y())
-                                  -2*ct*(ptB.Y()*trkTVector3[i].X()-ptB.X()*trkTVector3[i].Y()));
-
-        double DHelixArray[] = {DQop, DLam, DPhi};
-        TVectorD DHelixVectorD(3, DHelixArray);
-
-        ctErr_pt2 += covHelix.Similarity(DHelixVectorD);
-    }
-    
-    return sqrt(ctErr_Lxy2 + ctErr_pt2);
-}
-
-
-// =================================================================================================
-// double PhisUtil::GetCt3DErr(TLorentzVector t, int iSV, int iPV)
+// double PhisUtil::GetCt3DErr(ROOT::Math::XYZVector vBs, int iSV, int iPV)
 // {
-//     TVector3 vSVT( svtX->at(iSV), svtY->at(iSV), svtZ->at(iSV) );
-//     TVector3 vPV( pvtX->at(iPV), pvtY->at(iPV), pvtZ->at(iPV) );
+//     using namespace ROOT::Math;
+//     XYZPoint vSVT( svtX->at(iSV), svtY->at(iSV), svtZ->at(iSV) );
+//     XYZPoint vPV( pvtX->at(iPV), pvtY->at(iPV), pvtZ->at(iPV) );
 
-//     TVector3 vPointing = vSVT - vPV;
-//     TVector3 vBs = t.Vect();
+//     auto vPointing = vSVT - vPV;
 
 //     TMatrixD covSV(3,3);
 //     double covSVArray[]={svtSxx->at(iSV),svtSxy->at(iSV),svtSxz->at(iSV),
@@ -1030,21 +704,63 @@ double PhisUtil::GetCt2DErr(TLorentzVector t, double bMass, int iSV)
 // }
 
 // =================================================================================================
-void PhisUtil::SetJpsiMuCut(bool ctCut = true) // change only different cuts
+void PhisUtil::SetJpsiMuCut(bool ctCut = true) // change only cuts different between the two HLT
 {
-    SetBsPtMin(10);
-    SetMuPtMin(3.5);
-    SetKaonPtMin(1.2);
-    if(ctCut) SetCtMin(0.007);
-    if(ctCut) SetCtSigmaMin(-999.);       // no cut
+    SetMuPtMin(muPtMin_jpsimu);
+    SetKaonPtMin(kaonPtMin_jpsimu);
+    SetCtSigmaMin(ctSigmaMin_jpsimu);
+    if(ctCut) SetCtMin(ctMin_jpsimu);
+    else      SetCtMin(-999.);
 }
 
 // =================================================================================================
-void PhisUtil::SetJpsiTrkTrkCut(bool ctCut = true) // change only different cuts
+void PhisUtil::SetJpsiTrkTrkCut(bool ctCut = true) // change only cuts different between the two HLT
 {
-    SetBsPtMin(9);
-    SetMuPtMin(4.0);
-    SetKaonPtMin(0.9);
-    if(ctCut) SetCtMin(-999.);            // no cut
-    if(ctCut) SetCtSigmaMin(3);
+    SetMuPtMin(muPtMin_jpsitrktrk);
+    SetKaonPtMin(kaonPtMin_jpsitrktrk);
+    SetCtSigmaMin(ctSigmaMin_jpsitrktrk);
+    if(ctCut) SetCtMin(ctMin_jpsitrktrk);
+    else      SetCtMin(-999.);
+}
+
+// =================================================================================================
+int PhisUtil::HLTMatch(int trackIdx, bool isMu){
+  
+  int       hltIdx = -1;  
+  double    minDist = 0.1; 
+
+  // type 5 = track, 2 = muon
+  for(int k=0; k<nHLTObjects; k++){
+
+    if(hltObjType->at(k) != 2 && isMu) continue; // check only matches between trigger muons and muons
+    if(hltObjType->at(k) != 5 && !isMu) continue; // check only matches between trigger tracks and kaons
+    
+    double dR = deltaR(trkEta->at(trackIdx), trkPhi->at(trackIdx), hltEta->at(k), hltPhi->at(k));
+
+    if(dR < minDist){
+      minDist = dR;
+      hltIdx = k;
+    }
+  }
+  return hltIdx;
+}
+
+// =================================================================================================
+ROOT::Math::PxPyPzEVector PhisUtil::svtP4( int iSV, bool fromRefit ) {
+  auto&& trkSsB = tracksFromSV(iSV);
+  
+  ROOT::Math::PxPyPzEVector sv(0,0,0,0);
+
+  for (auto iSvTrk: trkSsB) {
+    auto iSvTvp = vpIndex(iSvTrk, iSV);
+    auto iSvTip = tvpTip->at(iSvTvp);
+    
+    ROOT::Math::PxPyPzEVector trk;
+    if (fromRefit) trk = ROOT::Math::PtEtaPhiMVector( tvpPt->at(iSvTvp), tvpEta->at(iSvTvp), tvpPhi->at(iSvTvp), tipMass->at(iSvTip) );
+    else trk = ROOT::Math::PtEtaPhiMVector( trkPt->at(iSvTrk), trkEta->at(iSvTrk), trkPhi->at(iSvTrk), tipMass->at(iSvTip) );
+    
+    sv += trk;
+  }
+
+  return sv;
 }

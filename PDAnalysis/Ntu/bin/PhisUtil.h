@@ -7,7 +7,9 @@
 #include "PDAnalysis/Ntu/interface/PDGenHandler.h"
 #include "PDAnalyzerUtil.h"
 #include "TF1.h"
-#include "TLorentzVector.h"
+#include "Math/Vector4D.h"
+#include "Math/Vector3D.h"
+#include "Math/Point3D.h"
 #include "Math/MinimizerOptions.h"
 #include "TMatrixD.h"
 #include "TVectorD.h"
@@ -78,19 +80,45 @@ public:
     double BuMassRangeTight[2] = {5.00, 5.65};
     double BdMassRangeTight[2] = {5.00, 5.50};
 
+    double bMassMin     = 5.24;
+    double bMassMax     = 5.49;
     double jpsiMassWin  = 0.150;
     double phiMassWin   = 0.010;
-    double bsPtMin      = 10;       // to change according to the hlt
-    double muPtMin      = 3.5;      // to change according to the hlt
-    double kaonPtMin    = 1.2;      // to change according to the hlt
+    double kstarMassWin = 0.09;
+
+    double bsPtMin      = 9.5;
+    double muPtMin      = 3.5;  // change according to the hlt
+    double kaonPtMin    = 1.15; // change according to the hlt
     double muEtaMax     = 2.4;
     double kaonEtaMax   = 2.5;
     int    kaonHitsMin  = 4;
-    double ctMin        = -999.;    // to change according to the hlt
-    double ctSigmaMin   = -999.;    // to change according to the hlt
     double vtxProbMin   = 0.02;
     int    softMuonID   = 1;
 
+    double ctMin        = -999.;    // change according to the hlt
+    double ctSigmaMin   = -999.;    // change according to the hlt
+
+    const double muPtMin_jpsimu        = 3.5;
+    const double muPtMin_jpsitrktrk    = 4.0;
+    const double kaonPtMin_jpsimu      = 1.15;
+    const double kaonPtMin_jpsitrktrk  = 0.9;    
+    const double ctMin_jpsimu          = 0.006;
+    const double ctMin_jpsitrktrk      = 0.01;
+    const double ctSigmaMin_jpsimu     = -999.;
+    const double ctSigmaMin_jpsitrktrk = 3.;
+
+
+    // HLT
+    double jpsiPt_HLTtk     = 6.9;
+    double muPt_HLTtk       = 4.0;
+    double kaonPt_HLTtk     = 0.8;
+    double ctSigmaMin_HLTtk = 3.0;
+
+    double muPt_HLTmu       = 3.5;
+
+
+    void SetBMassMin(double newValue){ bMassMin = newValue; }
+    void SetBMassMax(double newValue){ bMassMax = newValue; }
     void SetJpsiMassWin(double newValue){ jpsiMassWin = newValue; }
     void SetPhiMassWin (double newValue){ phiMassWin  = newValue; }
     void SetBsPtMin(double newValue){ bsPtMin = newValue; }
@@ -138,36 +166,354 @@ public:
     int    GetCandidate(TString process);
     
     double GetInvMass(int i1, int i2, double mass1, double mass2);
-    int    TagMixStatus( unsigned int genIndex );
+    int    GetMixStatus( unsigned int genIndex );
     double GetMuoPFiso (int iMuon);
     double GetJetCharge(int iJet, double kappa);
     double GetListCharge(std::vector <int> *list, double kappa);
     int    IPsign(int iMuon, int iPV);
     double GetJetProbb(int iJet);
     double CountEventsWithFit(TH1 *hist, TString process);
-    int    GetBestPV(int isvt, TLorentzVector t);
-    TLorentzVector GetTLorentzVecFromJpsiX(int iSvt);
+    template <typename Vector>
+    int    GetPVPointing(int isvt, Vector t);
     double dZ(int itk, int iPV);
     double dXYjet(int itk, int iPV, int iJet);
-    void   PrintMotherChain(int iGen);
-    void   PrintDaughterTree(int iGen, const std::string & pre);
-    void   PrintDaughterTreePt(int iGen, const std::string & pre);
+    void   PrintMotherChain(int iGen, std::ostream& out = std::cout);
+    void   PrintDaughterTree(int iGen, const std::string & pre); // old interface
+    void   PrintDaughterTreePt(int iGen, const std::string & pre); // old interface
+    void   PrintDaughterTree(int iGen, std::ostream& out = std::cout, const std::string& prefix = "", bool isLastSibling = true);
     bool   HasDaughter(int iGen);
 
-    double GetCt2D(TLorentzVector t, double mass, int iSV);
-    double GetCt2D(TLorentzVector t, double mass, int iSV, int iPV);
-    double GetCt3D(TLorentzVector t, double mass, int iSV, int iPV);
+    template <typename Point, typename Vector>
+    ROOT::Math::XYZPoint PCAwrtBeamSpot(Point point, Vector vector);
 
-    double GetCt2DErr(TLorentzVector t, double mass, int iSV);
-    double GetCt2DErr(TLorentzVector t, double mass, int iSV, int iPV);
-    // double GetCt3DErr(TLorentzVector t, int iSV, int iPV);
+    template <typename Vector>
+    double GetCt2D(Vector ptB, double bMass, int iSV);
+    template <typename Vector>
+    double GetCt2D(Vector ptB, double bMass, int iSV, int iPV, bool useRefittedPV);
+    
+    template <typename Vector>
+    double GetCt3D(Vector ptB, double bMass, int iSV, int iPV, bool useRefittedPV);
+    
+    template <typename PtVector, typename LVector>
+    double GetCtFromVector(PtVector ptB, double bMass, LVector L);
+    
+    template <typename Vector>
+    double GetCt2DErr(Vector ptB, double bMass, int iSV);
+    template <typename Vector>
+    double GetCt2DErr(Vector ptB, double bMass, int iSV, int iPV, bool useRefittedPV);
+    
+    template <typename PtVector, typename LVector>
+    double GetCtErrFromVector(PtVector ptB, double bMass, LVector L, TMatrixD PVSVcov, int iSV);
+    // double GetCt3DErr(Vector ptB, int iSV, int iPV);
 
     bool isTrkHighPurity(int itk){ return (( trkQuality->at( itk ) >> 2 ) & 1); }
+    int  HLTMatch(int, bool);
+    
+    template <typename Vector1, typename Vector2>
+    double DeltaR(Vector1 v1, Vector2 v2);
+    
+    
+    ROOT::Math::PxPyPzEVector svtP4( int iSV, bool fromRefit = true);
 
 
 protected:
 
 
 };
+
+// =================================================================================================
+// Finds the PCA between the beamspot line and the line passing from the SV parallel to the momentum
+// Evaluated on the beamspot line
+template <typename Point, typename Vector>
+ROOT::Math::XYZPoint PhisUtil::PCAwrtBeamSpot(Point point, Vector vector)
+{
+    using namespace ROOT::Math;
+    XYZPoint  sv(point);
+    XYZVector p(vector);
+    
+    XYZPoint  bs(bsX, bsY, bsZ);
+    XYZVector bsDir(bsdXdZ, bsdYdZ, 1);
+    
+    auto d = bs - sv;
+    
+    double numerator = d.Dot(p.Cross(p.Cross(bsDir)));
+    
+    double denominator = (bsDir.Mag2()*p.Mag2() - pow(p.Dot(bsDir), 2));
+    
+    double t = numerator/denominator;
+
+    return bs + t * bsDir;
+}
+
+// =================================================================================================
+template <typename PtVector, typename LVector>
+double PhisUtil::GetCtFromVector(PtVector pB, double bMass, LVector L)
+{
+    ROOT::Math::XYZVector pBCart(pB);
+    ROOT::Math::XYZVector LCart(L);
+    
+    return bMass*LCart.Dot(pBCart)/pBCart.Mag2();
+}
+
+// =================================================================================================
+template <typename Vector>
+double PhisUtil::GetCt2D(Vector t, double bMass, int iSV) 
+{    
+    using namespace ROOT::Math;
+    XYZPoint SVpos( svtX->at(iSV), svtY->at(iSV), svtZ->at(iSV) );
+
+    // beam spot position need to be corrected as a function of z
+    double Zpos = PCAwrtBeamSpot(SVpos, t).Z();
+    double bsX_fix = bsX + bsdXdZ*(Zpos - bsZ);
+    double bsY_fix = bsY + bsdYdZ*(Zpos - bsZ);
+
+    XYZPoint PVpos(bsX_fix, bsY_fix, 0.); //bsZ makes no sense
+    auto Lxy = SVpos - PVpos;
+    Lxy.SetZ(0.);
+
+    XYZVector ptB(t);
+    ptB.SetZ(0.);
+
+    return GetCtFromVector(ptB, bMass, Lxy);
+}
+
+// =================================================================================================
+template <typename Vector>
+double PhisUtil::GetCt2D(Vector t, double bMass, int iSV, int iPV, bool useRefittedPV)
+{
+    using namespace ROOT::Math;
+    XYZPoint SVpos(svtX->at(iSV),svtY->at(iSV),svtZ->at(iSV));
+
+    XYZPoint PVpos;
+    if(useRefittedPV) PVpos = XYZPoint(svtX->at(iPV),svtY->at(iPV),svtZ->at(iPV));
+    else              PVpos = XYZPoint(pvtX->at(iPV),pvtY->at(iPV),pvtZ->at(iPV));
+    
+    auto Lxy = SVpos - PVpos;
+    Lxy.SetZ(0.);
+
+    XYZVector ptB(t);
+    ptB.SetZ(0.);
+    
+    return GetCtFromVector(ptB, bMass, Lxy);
+}
+
+// =================================================================================================
+template <typename Vector>
+double PhisUtil::GetCt3D(Vector t, double bMass, int iSV, int iPV, bool useRefittedPV)
+{
+    using namespace ROOT::Math;
+    XYZPoint SVpos(svtX->at(iSV),svtY->at(iSV),svtZ->at(iSV));
+
+    XYZPoint PVpos;
+    if(useRefittedPV) PVpos = XYZPoint(svtX->at(iPV),svtY->at(iPV),svtZ->at(iPV));
+    else              PVpos = XYZPoint(pvtX->at(iPV),pvtY->at(iPV),pvtZ->at(iPV));
+    
+    auto Lxyz = SVpos - PVpos;
+    
+    return GetCtFromVector(t, bMass, Lxyz);
+}
+
+// =====================================================================================
+template <typename PtVector, typename LVector>
+double PhisUtil::GetCtErrFromVector(PtVector ptB, double bMass, LVector L, TMatrixD PVSVcov, int iSV)
+{
+    using namespace ROOT::Math;
+
+    double ct = GetCtFromVector(ptB, bMass, L);
+
+    double ptBArray[] = {ptB.X(), ptB.Y(), ptB.Z()};
+    TVectorD ptBVector(3, ptBArray);
+
+    if(L.Mag2() == 0){
+        cout << "Secondary vertex is exactly the same as PV" << endl;
+        return -999.;
+    }
+
+    //Lxy contribution
+    double ctErr_L2 = pow(bMass/ptB.Mag2(),2)*PVSVcov.Similarity(ptBVector);
+
+    //Pt contribution
+    auto& tkB  = tracksFromSV(iSV);
+    int ntk = tkB.size();
+
+    unordered_map<int,int> trkTotpp;
+
+    for(int itpp = 0; itpp < nTrkPer; itpp++)
+        trkTotpp[tppTrk->at(itpp)] = itpp;
+    
+    vector<XYZVector> trkMomentum(ntk);
+    vector<int> qArray(ntk);
+    vector<int> trk_idx(ntk);
+
+    for( int i = 0; i < ntk; ++i ){
+        int j = tkB.at(i);
+        XYZVector tempTV3(trkPx->at(j), trkPy->at(j), trkPz->at(j));
+
+        trkMomentum[i]  = tempTV3;
+        qArray[i]       = trkCharge->at(j);
+        trk_idx[i]      = j;
+    }
+
+    double ctErr_pt2 = 0.;
+
+    // Construct trkTotpp map
+    for(int i = 0; i < ntk; ++i){
+        int itpp = trkTotpp.at(trk_idx[i]);
+
+        double covHelixArray[] = {
+            tppSQopQop->at(itpp), tppSQopLam->at(itpp), tppSQopPhi->at(itpp),
+            tppSQopLam->at(itpp), tppSLamLam->at(itpp), tppSLamPhi->at(itpp),
+            tppSQopPhi->at(itpp), tppSLamPhi->at(itpp), tppSPhiPhi->at(itpp)
+        };
+        TMatrixD covHelix(3,3);
+        covHelix.SetMatrixArray(covHelixArray);
+
+        // Helix parameters
+        double Qop = qArray[i]/trkMomentum[i].R();
+        double Lam = TMath::Pi()/2 - trkMomentum[i].Theta();
+
+        double DQop = 1./(ptB.Mag2()*Qop)*(2*ct*ptB.Dot(trkMomentum[i]) - bMass*L.Dot(trkMomentum[i]));
+        double DLam = tan(Lam)/ptB.Mag2()*(2*ct*ptB.Dot(trkMomentum[i]) - bMass*L.Dot(trkMomentum[i]));
+        double DPhi = 1./ptB.Mag2()*(bMass*(L.Y()*trkMomentum[i].X() - L.X()*trkMomentum[i].Y())
+                                  - 2*ct*(ptB.Y()*trkMomentum[i].X() - ptB.X()*trkMomentum[i].Y()));
+
+        double DHelixArray[] = {DQop, DLam, DPhi};
+        TVectorD DHelixVectorD(3, DHelixArray);
+
+        ctErr_pt2 += covHelix.Similarity(DHelixVectorD);
+    }
+    
+    return sqrt(ctErr_L2 + ctErr_pt2);
+}
+
+// =================================================================================================
+template <typename Vector>
+double PhisUtil::GetCt2DErr(Vector t, double bMass, int iSV, int iPV, bool useRefittedPV)
+{
+    using namespace ROOT::Math;
+    XYZPoint SVpos(svtX->at(iSV),svtY->at(iSV),svtZ->at(iSV));
+
+    XYZPoint PVpos;
+    if(useRefittedPV) PVpos = XYZPoint(svtX->at(iPV),svtY->at(iPV),svtZ->at(iPV));
+    else              PVpos = XYZPoint(pvtX->at(iPV),pvtY->at(iPV),pvtZ->at(iPV));
+    
+    auto Lxy = SVpos - PVpos;
+    Lxy.SetZ(0.);
+
+    XYZVector ptB(t);
+    ptB.SetZ(0.);
+
+    // Conversions for matrix multiplications
+    double covSVArray[] = {
+        svtSxx->at(iSV),svtSxy->at(iSV),svtSxz->at(iSV),
+        svtSxy->at(iSV),svtSyy->at(iSV),svtSyz->at(iSV),
+        svtSxz->at(iSV),svtSyz->at(iSV),svtSzz->at(iSV)
+    };
+
+    array<double, 9> covPVArray;
+    if(useRefittedPV){
+        covPVArray = {{
+            svtSxx->at(iPV),svtSxy->at(iPV),svtSxz->at(iPV),
+            svtSxy->at(iPV),svtSyy->at(iPV),svtSyz->at(iPV),
+            svtSxz->at(iPV),svtSyz->at(iPV),svtSzz->at(iPV)
+        }};
+    }else{
+        covPVArray = {{
+            pvtSxx->at(iPV),pvtSxy->at(iPV),pvtSxz->at(iPV),
+            pvtSxy->at(iPV),pvtSyy->at(iPV),pvtSyz->at(iPV),
+            pvtSxz->at(iPV),pvtSyz->at(iPV),pvtSzz->at(iPV)
+        }};
+    }
+
+    TMatrixD covSV(3,3);
+    TMatrixD covPV(3,3);
+    covSV.SetMatrixArray(covSVArray);
+    covPV.SetMatrixArray(covPVArray.data());
+
+    TMatrixD covTot = covSV + covPV;
+    
+    return GetCtErrFromVector(ptB, bMass, Lxy, covTot, iSV);
+}
+
+
+// =================================================================================================
+template <typename Vector>
+double PhisUtil::GetCt2DErr(Vector t, double bMass, int iSV)
+{
+    using namespace ROOT::Math;
+    XYZPoint SVpos(svtX->at(iSV),svtY->at(iSV),svtZ->at(iSV));
+    // beam spot position need to be corrected as a function of z
+    double Zpos = PCAwrtBeamSpot(SVpos, t).Z();
+    double bsX_fix = bsX + bsdXdZ*(Zpos - bsZ);
+    double bsY_fix = bsY + bsdYdZ*(Zpos - bsZ);
+
+    XYZPoint PVpos(bsX_fix, bsY_fix, 0.);
+    auto Lxy = SVpos - PVpos;
+    Lxy.SetZ(0.);
+
+    XYZVector ptB(t);
+    ptB.SetZ(0.);
+
+    // Conversions for matrix multiplications
+    double covSVArray[] = {
+        svtSxx->at(iSV),svtSxy->at(iSV),svtSxz->at(iSV),
+        svtSxy->at(iSV),svtSyy->at(iSV),svtSyz->at(iSV),
+        svtSxz->at(iSV),svtSyz->at(iSV),svtSzz->at(iSV)
+    };
+
+    double covPVArray[] = {
+        pow(bwX,2),0.,0.,
+        0.,pow(bwY,2),0.,
+        0.,0.,0.
+    };
+
+    TMatrixD covSV(3,3);
+    TMatrixD covPV(3,3);
+    covSV.SetMatrixArray(covSVArray);
+    covPV.SetMatrixArray(covPVArray);
+
+    TMatrixD covTot = covSV + covPV;
+    
+    return GetCtErrFromVector(ptB, bMass, Lxy, covTot, iSV);
+}
+
+// =====================================================================================
+template <typename Vector>
+int PhisUtil::GetPVPointing(int iSV, Vector t)
+{
+    using namespace ROOT::Math;
+    int bestPV = -1;
+    double bestAngle = -1; // actually the cosine
+
+    XYZPoint vSVT( svtX->at(iSV), svtY->at(iSV), svtZ->at(iSV) );
+    XYZVector vB(t);
+
+    for( int i=0; i<nPVertices; ++i ){
+       if(abs(svtZ->at(iSV) - pvtZ->at(i)) > 5. ) continue;
+
+       XYZPoint vPV(pvtX->at(i), pvtY->at(i), pvtZ->at(i) );
+       auto vPointing = vSVT - vPV;
+       
+       // genVector has no Angle method, apparently
+       double angle = vPointing.Unit().Dot(vB.Unit());
+       
+
+       if(angle > bestAngle ){
+         bestAngle = angle;
+         bestPV = i;
+       }
+    }
+    return bestPV;
+}
+
+// ========================================================================================
+template <typename Vector1, typename Vector2>
+double PhisUtil::DeltaR(Vector1 v1, Vector2 v2)
+{
+    double deta = v1.Eta() - v2.Eta();
+    double dphi = TMath::Abs(TMath::Pi() - TMath::Abs(TMath::Pi() - TMath::Abs(v1.Phi() - v2.Phi())));
+    
+    return std::hypot(deta, dphi);
+}
 
 #endif
